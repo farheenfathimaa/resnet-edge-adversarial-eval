@@ -1,0 +1,12 @@
+torch==2.13.0
+torchvision==0.28.0
+onnx==1.22.0
+onnxruntime==1.30.0
+numpy==1.26.4
+pillow==12.3.0
+matplotlib==3.9.1
+fastapi==0.136.1
+uvicorn==0.52.4
+python-multipart==0.0.28
+torchattacks==3.5.1
+pytest==8.4.2

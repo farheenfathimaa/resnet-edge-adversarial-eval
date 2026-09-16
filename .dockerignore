@@ -1,0 +1,13 @@
+data
+models/resnet18w05_fp32.onnx
+models/resnet18w05_int8_dynamic.onnx
+models/resnet18w05_int8_static.onnx
+results
+.git
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+venv
+.env
+**/__pycache__
