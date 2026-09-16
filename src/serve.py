@@ -100,7 +100,12 @@ def make_live_app() -> FastAPI:
     return create_app()
 
 
+# Standard ASGI object so both `uvicorn src.serve:app` and the pytest
+# factory path work out of the box.
+app = create_app()
+
+
 if __name__ == "__main__":  # pragma: no cover
     import uvicorn
 
-    uvicorn.run(make_live_app(), host="0.0.0.0", port=8000)
+    uvicorn.run("src.serve:app", host="0.0.0.0", port=8000)

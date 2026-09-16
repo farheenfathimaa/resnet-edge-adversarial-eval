@@ -131,6 +131,44 @@ results/                JSON/MD/CSV tables + robustness chart (gitignored)
 Dockerfile, .dockerignore, requirements.txt
 ```
 
+## What a run looks like (single command; i5-1235U laptop CPU)
+
+```
+> python main.py all
+
+STEP 1/4 : train
+[train] fashionmnist | model=ResNet18x0.5 | 12000 train imgs | 2 epochs | bs=128 | lr=0.05 | threads=8
+  epoch 1/2: loss=0.0057 train_acc=0.7386 val_acc=0.8395 (263s elapsed)
+  epoch 2/2: loss=0.0048 train_acc=0.7796 val_acc=0.8330 (523s elapsed)
+[train] done in 523s | best val accuracy = 0.8395
+
+STEP 2/4 : quantize
+[quantize] PyTorch static INT8 model saved -> models/resnet18w05_int8_ptq.pt (2.89 MB)
+[quantize] ONNX FP32 exported -> models/resnet18w05_fp32.onnx (11.19 MB)
+[quantize] ONNX Runtime dynamic INT8 -> models/resnet18w05_int8_dynamic.onnx (2.84 MB)
+[quantize] ONNX Runtime static INT8 -> models/resnet18w05_int8_static.onnx (2.84 MB)
+  fp32 torch         acc=0.8115
+  int8 torch (PTQ)   acc=0.8175
+  fp32 onnx (ORT)    acc=0.8115
+
+STEP 3/4 : benchmark
+  torch fp32 : 40.652 ms  (11.247 MB)
+  torch int8 : 19.245 ms  (2.885 MB)
+  onnx fp32           : 19.886 ms  (11.188 MB)
+  onnx int8 (dynamic) : 201.018 ms  (2.843 MB)
+  onnx int8 (static)  : 11.008 ms  (2.844 MB)
+
+STEP 4/4 : adversarial
+[adversarial] clean accuracy check
+  fp32 clean   : 0.8400
+  int8 clean   : 0.8300
+  [eps=0.005] fp32 fgsm=0.8150 pgd=0.8150 | int8 transfer fgsm=0.8100
+  [eps=0.010] fp32 fgsm=0.7850 pgd=0.7850 | int8 transfer fgsm=0.7850
+  [eps=0.020] fp32 fgsm=0.7100 pgd=0.7100 | int8 transfer fgsm=0.7100
+
+Pipeline complete.              # results land in results/ as .json/.md/.csv/.png
+```
+
 ## Notes & limitations
 
 - **Accuracy numbers fluctuate ±1-2 pp** between runs because the eval subsets are
@@ -154,9 +192,36 @@ Dockerfile, .dockerignore, requirements.txt
 
 ```bash
 pip install -r requirements.txt
-python main.py all          # full pipeline (~15-20 min CPU)
+python main.py all          # full pipeline (~20-25 min CPU laptop)
 python -m pytest -q         # 10 offline tests
 docker build -t resnet-edge-eval .   # serve workload in a container
 docker run --rm -p 8000:8000 resnet-edge-eval
 curl -X POST -F "file=@img.png" http://localhost:8000/predict
 ```
+
+## Local serve & smoke-test (Windows / PowerShell)
+
+```powershell
+python main.py all          # must complete a FULL run first (smoke flags leave low-acc artifacts behind!)
+python -m pytest -q
+
+# terminal 1 - start the service
+python -m uvicorn src.serve:app --host 127.0.0.1 --port 8000
+#   (or: python main.py serve)
+
+# terminal 2 - test it (use curl.exe, not the Invoke-WebRequest alias)
+curl.exe http://127.0.0.1:8000/health
+curl.exe -X POST -F "file=@img.png" http://127.0.0.1:8000/predict
+```
+
+Example responses:
+
+```json
+{"health":"ok","model_source":"torch int8 (static ptq)"}
+{"class_id":8,"class_name":"Bag","latency_ms":9.11,"model_source":"torch int8 (static ptq)"}
+```
+
+> **Tip:** the quick-smoke `python main.py all --epochs 1 --train-subset 2000 --compact`
+> overwrites `models/` with an untrained-level checkpoint (~25% acc). It is only for
+> exercising the CLI plumbing. Re-run the full `python main.py all` before you want
+> meaningful predictions or benchmark/adversarial numbers.
