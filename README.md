@@ -72,15 +72,15 @@ noise; the FX INT8 model even edges FP32 by 0.6 pp on this subset).
 
 | variant | kind | latency (ms) | size (MB) | vs FP32 time | vs FP32 size |
 |---|---|---|---|---|---|
-| torch fp32 | torch | 33.51 | 11.25 | 1.0x | 1.0x |
-| torch int8 (static ptq) | torch | 17.55 | 2.89 | **1.9x faster** | 3.9x smaller |
-| onnx fp32 | onnx | 19.65 | 11.19 | 1.0x | 1.0x |
-| onnx int8 (dynamic) | onnx | 170.69 | 2.84 | 0.1x slower | 3.9x smaller |
-| onnx int8 (static) | onnx | 9.48 | 2.84 | **2.1x faster** | 3.9x smaller |
+| torch fp32 | torch | 40.65 | 11.25 | 1.0x | 1.0x |
+| torch int8 (static ptq) | torch | 19.25 | 2.89 | **2.1x faster** | 3.9x smaller |
+| onnx fp32 | onnx | 19.89 | 11.19 | 1.0x | 1.0x |
+| onnx int8 (dynamic) | onnx | 201.02 | 2.84 | 0.1x slower | 3.9x smaller |
+| onnx int8 (static) | onnx | 11.01 | 2.84 | **1.8x faster** | 3.9x smaller |
 
 Key findings:
 
-- **Static INT8 wins**: ~4x smaller on disk and ~2x faster end-to-end for this tiny
+- **Static INT8 wins**: ~4x smaller on disk and ~1.8-2x faster end-to-end for this tiny
   conv net. Kernels are `s8::s8::u8`-fused on x86-64.
 - **Dynamic INT8 is a trap** for small conv nets: the per-call input quantization
   overhead dominates the compute time of a ~4 MFLOP forward pass, so it is ~10x slower

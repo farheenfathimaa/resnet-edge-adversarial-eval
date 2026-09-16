@@ -36,7 +36,7 @@ def _cmd_quantize(args) -> None:
 
     if args.compact:
         quantize.quantize_torch_int8()
-        quantize.evaluate_variants()
+        quantize.evaluate_variants(include_onnx=False)
     else:
         quantize.run_all()
 
@@ -101,6 +101,14 @@ def _cmd_status(args) -> None:
             print(f"  {name:<26}: missing")
 
 
+def _add_train_args(p) -> None:
+    p.add_argument("--epochs", type=int, default=config.EPOCHS)
+    p.add_argument("--train-subset", type=int, default=config.TRAIN_SUBSET)
+    p.add_argument("--val-subset", type=int, default=config.VAL_SUBSET)
+    p.add_argument("--batch-size", type=int, default=config.BATCH_SIZE)
+    p.add_argument("--lr", type=float, default=config.LR)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="resnet-edge-adversarial-eval",
@@ -110,11 +118,7 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("train", help="train the small ResNet (FP32)")
-    p.add_argument("--epochs", type=int, default=config.EPOCHS)
-    p.add_argument("--train-subset", type=int, default=config.TRAIN_SUBSET)
-    p.add_argument("--val-subset", type=int, default=config.VAL_SUBSET)
-    p.add_argument("--batch-size", type=int, default=config.BATCH_SIZE)
-    p.add_argument("--lr", type=float, default=config.LR)
+    _add_train_args(p)
     p.set_defaults(func=_cmd_train)
 
     p = sub.add_parser("quantize", help="INT8 quantization + accuracy report")
@@ -134,9 +138,9 @@ def main() -> None:
     p.set_defaults(func=_cmd_serve)
 
     p = sub.add_parser("all", help="run: train -> quantize -> benchmark -> adversarial")
-    p.add_argument("--epochs", type=int, default=config.EPOCHS)
-    p.add_argument("--train-subset", type=int, default=config.TRAIN_SUBSET)
-    p.add_argument("--val-subset", type=int, default=config.VAL_SUBSET)
+    _add_train_args(p)
+    p.add_argument("--compact", action="store_true",
+                   help="skip ONNX export / ORT quantization")
     p.set_defaults(func=_cmd_all)
 
     p = sub.add_parser("status", help="show which artifacts exist")

@@ -192,9 +192,12 @@ def _load_quant_nn(model_path: Path | str | None = None) -> torch.nn.Module:
 
 def evaluate_variants(
     val_batches: int | None = None,
+    include_onnx: bool = True,
 ) -> dict:
     """Accuracy of all variants on the validation subset.
 
+    include_onnx=False skips the onnx/ORT accuracy checks (used by --compact
+    so freshly quantized torch artifacts are not mixed with stale ONNX files).
     Returns {"fp32_torch": acc, "int8_torch_ptq": acc,
              "fp32_onnx_ort": acc, "int8_onnx_ort_dynamic": acc,
              "int8_onnx_ort_static": acc} plus elapsed time.
@@ -238,7 +241,7 @@ def evaluate_variants(
         return ort.InferenceSession(str(path), so, providers=["CPUExecutionProvider"])
 
     onnx_fp32 = config.MODELS_DIR / config.ONNX_FP32
-    if onnx_fp32.exists():
+    if include_onnx and onnx_fp32.exists():
         sess = make_ort_sess(onnx_fp32)
 
         def fn(x):
@@ -252,7 +255,8 @@ def evaluate_variants(
         ("int8_onnx_ort_static", config.ONNX_INT8_STATIC),
     ]:
         p = config.MODELS_DIR / name
-        if p.exists():
+        if not (include_onnx and p.exists()):
+            continue
             sess = make_ort_sess(p)
 
             def fn(x, sess=sess):
