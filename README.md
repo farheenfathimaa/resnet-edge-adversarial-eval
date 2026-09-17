@@ -1,4 +1,4 @@
-# resnet-edge-adversarial-eval
+# Resnet Edge Adversarial Eval
 
 Edge-optimized deployment and adversarial robustness evaluation of a small ResNet
 classifier. Trains a half-width ResNet-18 on **FashionMNIST** (CPU-only), quantizes it
